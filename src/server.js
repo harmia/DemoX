@@ -1,4 +1,5 @@
 const path = require('path');
+const crypto = require('crypto');
 const express = require('express');
 const { getSpotPricesNext24h } = require('./pricingService');
 const { calculateSchedule } = require('./scheduler');
@@ -32,7 +33,7 @@ app.post('/api/schedules', async (req, res) => {
     const result = calculateSchedule(prices, req.body);
 
     const schedule = {
-      id: `schedule-${Date.now()}`,
+      id: crypto.randomUUID(),
       createdAt: new Date().toISOString(),
       request: req.body,
       result,
