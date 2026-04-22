@@ -6,26 +6,108 @@ function localDateTimeInputValue(date) {
   return d.toISOString().slice(0, 16);
 }
 
+function formatHour(dateLike) {
+  const date = new Date(dateLike);
+  return `${String(date.getHours()).padStart(2, '0')}:00`;
+}
+
+function formatHourRange(timestamp) {
+  const start = new Date(timestamp);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  return `${formatHour(start)}–${formatHour(end)}`;
+}
+
+function updateTooltipPosition(event, tooltip) {
+  const panel = document.querySelector('.chartPanel');
+  const rect = panel.getBoundingClientRect();
+  const x = Math.min(Math.max(event.clientX - rect.left, 28), rect.width - 28);
+  const y = Math.max(event.clientY - rect.top - 8, 14);
+
+  tooltip.style.left = `${x}px`;
+  tooltip.style.top = `${y}px`;
+}
+
 function renderChart() {
   const chart = document.getElementById('chart');
+  const tooltip = document.getElementById('chartTooltip');
   chart.innerHTML = '';
+
+  if (prices.length === 0) return;
 
   const max = Math.max(...prices.map((p) => p.eurPerMWh));
 
   prices.forEach((price) => {
     const bar = document.createElement('div');
     const date = new Date(price.timestamp);
-    const hourLabel = `${String(date.getHours()).padStart(2, '0')}`;
+    const hour = date.getHours();
 
     bar.className = `bar ${selectedHourSet.has(price.timestamp) ? 'selected' : ''}`;
-    bar.style.height = `${Math.max((price.eurPerMWh / max) * 190, 12)}px`;
-    bar.title = `${hourLabel}:00 - ${price.eurPerMWh} €/MWh`;
+    bar.style.height = `${Math.max((price.eurPerMWh / max) * 176, 12)}px`;
+    bar.title = `${formatHourRange(price.timestamp)} • ${price.eurPerMWh} €/MWh`;
 
-    const label = document.createElement('span');
-    label.textContent = hourLabel;
-    bar.appendChild(label);
+    bar.addEventListener('mouseenter', (event) => {
+      tooltip.hidden = false;
+      tooltip.textContent = bar.title;
+      updateTooltipPosition(event, tooltip);
+    });
+
+    bar.addEventListener('mousemove', (event) => {
+      updateTooltipPosition(event, tooltip);
+    });
+
+    bar.addEventListener('mouseleave', () => {
+      tooltip.hidden = true;
+    });
+
+    if (hour % 3 === 0) {
+      const label = document.createElement('span');
+      label.textContent = String(hour).padStart(2, '0');
+      bar.appendChild(label);
+    }
+
     chart.appendChild(bar);
   });
+}
+
+function renderTimeline() {
+  const timeline = document.getElementById('timeline');
+  timeline.innerHTML = '';
+
+  prices.forEach((price) => {
+    const slot = document.createElement('div');
+    const date = new Date(price.timestamp);
+    const hour = date.getHours();
+    const isSelected = selectedHourSet.has(price.timestamp);
+
+    slot.className = `timelineSlot ${isSelected ? 'on' : ''}`;
+    slot.title = `${formatHourRange(price.timestamp)} • ${isSelected ? 'Charging ON' : 'Charging OFF'}`;
+
+    if (hour % 3 === 0) {
+      const tick = document.createElement('span');
+      tick.className = 'tick';
+      tick.textContent = String(hour).padStart(2, '0');
+      slot.appendChild(tick);
+    }
+
+    timeline.appendChild(slot);
+  });
+}
+
+function triggerUpdateAnimation() {
+  const chart = document.getElementById('chart');
+  const timeline = document.getElementById('timeline');
+  const summary = document.getElementById('summary');
+
+  [chart, timeline, summary].forEach((el) => {
+    el.classList.remove('animate-update');
+    // eslint-disable-next-line no-unused-expressions
+    el.offsetWidth;
+    el.classList.add('animate-update');
+  });
+
+  window.setTimeout(() => {
+    [chart, timeline, summary].forEach((el) => el.classList.remove('animate-update'));
+  }, 900);
 }
 
 function updateModeFields() {
@@ -39,6 +121,7 @@ async function loadPrices() {
   const data = await response.json();
   prices = data.prices;
   renderChart();
+  renderTimeline();
 }
 
 function initDefaults() {
@@ -84,19 +167,30 @@ async function submitSchedule(event) {
 
   selectedHourSet = new Set(data.result.selectedHours.map((h) => h.timestamp));
   renderChart();
+  renderTimeline();
+  triggerUpdateAnimation();
 
   document.getElementById('summary').textContent = `${data.result.summary} | Estimated cost: €${data.result.estimatedCostEur}`;
 }
 
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('themeToggle').textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+}
+
 function initThemeToggle() {
   const key = 'ev-theme';
-  const current = localStorage.getItem(key);
-  if (current) document.documentElement.setAttribute('data-theme', current);
+  const storedTheme = localStorage.getItem(key);
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const initialTheme = storedTheme || (prefersDark ? 'dark' : 'light');
+
+  applyTheme(initialTheme);
 
   document.getElementById('themeToggle').addEventListener('click', () => {
-    const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem(key, next);
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    applyTheme(nextTheme);
+    localStorage.setItem(key, nextTheme);
   });
 }
 
