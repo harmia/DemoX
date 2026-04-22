@@ -1,0 +1,47 @@
+[
+  {
+    "id": "example-1",
+    "createdAt": "2026-04-22T00:00:00.000Z",
+    "request": {
+      "earliestStart": "2026-04-22T01:00:00.000Z",
+      "latestEnd": "2026-04-22T08:00:00.000Z",
+      "requiredHours": 3,
+      "chargingPowerKw": 11
+    },
+    "result": {
+      "summary": "Charging scheduled: 04:00–07:00",
+      "estimatedCostEur": 1.51
+    }
+  },
+  {
+    "id": "schedule-1776881040721",
+    "createdAt": "2026-04-22T18:04:00.721Z",
+    "request": {
+      "earliestStart": "2026-04-22T20:00:00.000Z",
+      "latestEnd": "2026-04-23T06:00:00.000Z",
+      "requiredHours": 3,
+      "chargingPowerKw": 11,
+      "maxPriceEurPerMWh": 90
+    },
+    "result": {
+      "selectedHours": [
+        {
+          "timestamp": "2026-04-22T22:00:00.000Z",
+          "eurPerMWh": 49
+        },
+        {
+          "timestamp": "2026-04-22T23:00:00.000Z",
+          "eurPerMWh": 45
+        },
+        {
+          "timestamp": "2026-04-23T00:00:00.000Z",
+          "eurPerMWh": 44
+        }
+      ],
+      "summary": "Charging scheduled: 22:00–01:00",
+      "estimatedCostEur": 1.52,
+      "hoursNeeded": 3,
+      "chargingPowerKw": 11
+    }
+  }
+]
