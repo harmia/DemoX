@@ -1,43 +1,25 @@
-const { MockPriceProvider, NordPoolPriceProvider, normalizeResolution } = require('./priceProviders');
+const fs = require('fs/promises');
+const path = require('path');
 
-const providers = {
-  mock: new MockPriceProvider(),
-  nordpool: new NordPoolPriceProvider(),
-};
+const MOCK_DATA_PATH = path.join(__dirname, '..', 'data', 'mock-prices.json');
 
-function resolveProvider(providerName = 'mock') {
-  const key = typeof providerName === 'string' ? providerName.toLowerCase() : 'mock';
-  const provider = providers[key];
-  if (!provider) {
-    throw new Error(`Unknown price provider "${providerName}".`);
+async function getSpotPricesNext24h(now = new Date()) {
+  const content = await fs.readFile(MOCK_DATA_PATH, 'utf8');
+  const data = JSON.parse(content);
+
+  if (!Array.isArray(data.pricesEurPerMWh) || data.pricesEurPerMWh.length < 24) {
+    throw new Error('Invalid mock pricing data. Expected 24 prices.');
   }
-  return provider;
-}
 
-async function getSpotPrices({
-  now = new Date(),
-  horizonHours = 24,
-  resolution = 'hourly',
-  provider = 'mock',
-} = {}) {
-  const selectedProvider = resolveProvider(provider);
-  return selectedProvider.getPrices({
-    start: now,
-    horizonHours,
-    resolution: normalizeResolution(resolution),
-  });
-}
+  const start = new Date(now);
+  start.setMinutes(0, 0, 0);
 
-async function getSpotPricesNext24h(now = new Date(), options = {}) {
-  return getSpotPrices({
-    now,
-    horizonHours: 24,
-    ...options,
-  });
+  return data.pricesEurPerMWh.slice(0, 24).map((eurPerMWh, index) => ({
+    timestamp: new Date(start.getTime() + index * 60 * 60 * 1000).toISOString(),
+    eurPerMWh,
+  }));
 }
 
 module.exports = {
-  getSpotPrices,
   getSpotPricesNext24h,
-  normalizeResolution,
 };

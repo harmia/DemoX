@@ -1,7 +1,7 @@
 const path = require('path');
 const crypto = require('crypto');
 const express = require('express');
-const { getSpotPricesNext24h, normalizeResolution } = require('./pricingService');
+const { getSpotPricesNext24h } = require('./pricingService');
 const { calculateSchedule } = require('./scheduler');
 const { readSchedules, saveSchedule } = require('./dataStore');
 
@@ -11,10 +11,8 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 
 app.get('/api/prices', async (_req, res) => {
   try {
-    const resolution = normalizeResolution(_req.query.resolution);
-    const source = _req.query.provider || 'mock';
-    const prices = await getSpotPricesNext24h(new Date(), { resolution, provider: source });
-    res.json({ source, resolution, prices });
+    const prices = await getSpotPricesNext24h();
+    res.json({ source: 'mock', prices });
   } catch (error) {
     res.status(500).json({ error: 'Failed to load prices.' });
   }
@@ -31,9 +29,7 @@ app.get('/api/schedules', async (_req, res) => {
 
 app.post('/api/schedules', async (req, res) => {
   try {
-    const resolution = normalizeResolution(req.body.priceResolution);
-    const provider = req.body.priceProvider || 'mock';
-    const prices = await getSpotPricesNext24h(new Date(), { resolution, provider });
+    const prices = await getSpotPricesNext24h();
     const result = calculateSchedule(prices, req.body);
 
     const schedule = {

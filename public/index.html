@@ -76,6 +76,7 @@
       .chart {
         margin-top: 16px;
         display: grid;
+        grid-template-columns: repeat(24, minmax(16px, 1fr));
         gap: 6px;
         align-items: end;
         height: 230px;
@@ -137,12 +138,6 @@
           <label>Optional max price (€/MWh)
             <input id="maxPriceEurPerMWh" type="number" min="0" step="0.1" placeholder="e.g. 90" />
           </label>
-          <label>Price granularity
-            <select id="priceResolution">
-              <option value="hourly">Hourly</option>
-              <option value="15min">15-minute</option>
-            </select>
-          </label>
           <button type="submit">Calculate cheapest charging slots</button>
         </form>
         <p class="muted">Mock prices now; pricing provider is isolated in backend for easy real Nord Pool integration later.</p>
@@ -151,10 +146,6 @@
 
       <div class="card" style="margin-top: 16px;">
         <h2>Spot prices (next 24h)</h2>
-        <label id="detailToggleWrap" class="muted" style="display:none; margin-top: 8px;">
-          <input id="show15MinDetail" type="checkbox" />
-          Show 15-minute detail
-        </label>
         <div id="chart" class="chart"></div>
         <div id="summary" class="summary">No schedule calculated yet.</div>
       </div>

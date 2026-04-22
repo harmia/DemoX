@@ -4,55 +4,36 @@ function toThresholdEurPerMWh(maxPriceEurPerMWh, maxPriceCentsPerKWh) {
   return null;
 }
 
-function contiguous(a, b, slotMs) {
-  return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime() === slotMs;
+function contiguous(a, b) {
+  return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime() === 60 * 60 * 1000;
 }
 
-function formatTime(isoString) {
+function formatHour(isoString) {
   const d = new Date(isoString);
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${String(d.getHours()).padStart(2, '0')}:00`;
 }
 
-function inferSlotDurationMs(prices) {
-  if (prices.length < 2) return 60 * 60 * 1000;
-  const sorted = [...prices].sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-
-  let minPositiveDiff = Infinity;
-  for (let i = 1; i < sorted.length; i += 1) {
-    const diff = new Date(sorted[i].timestamp) - new Date(sorted[i - 1].timestamp);
-    if (diff > 0 && diff < minPositiveDiff) {
-      minPositiveDiff = diff;
-    }
-  }
-
-  return Number.isFinite(minPositiveDiff) ? minPositiveDiff : 60 * 60 * 1000;
-}
-
-function summarizeSlotRanges(slots, slotMs) {
-  if (slots.length === 0) return '';
+function summarizeHourRanges(hours) {
+  if (hours.length === 0) return '';
 
   const ranges = [];
-  let start = slots[0];
-  let prev = slots[0];
+  let start = hours[0];
+  let prev = hours[0];
 
-  for (let i = 1; i < slots.length; i += 1) {
-    const current = slots[i];
-    if (!contiguous(prev, current, slotMs)) {
-      const endTimestamp = new Date(prev.timestamp).getTime() + slotMs;
-      ranges.push(`${formatTime(start.timestamp)}–${formatTime(new Date(endTimestamp).toISOString())}`);
+  for (let i = 1; i < hours.length; i += 1) {
+    const current = hours[i];
+    if (!contiguous(prev, current)) {
+      const endHour = new Date(prev.timestamp).getTime() + 60 * 60 * 1000;
+      ranges.push(`${formatHour(start.timestamp)}–${formatHour(new Date(endHour).toISOString())}`);
       start = current;
     }
     prev = current;
   }
 
-  const finalEndTimestamp = new Date(prev.timestamp).getTime() + slotMs;
-  ranges.push(`${formatTime(start.timestamp)}–${formatTime(new Date(finalEndTimestamp).toISOString())}`);
+  const finalEndHour = new Date(prev.timestamp).getTime() + 60 * 60 * 1000;
+  ranges.push(`${formatHour(start.timestamp)}–${formatHour(new Date(finalEndHour).toISOString())}`);
 
   return ranges.join(', ');
-}
-
-function summarizeHourRanges(hours) {
-  return summarizeSlotRanges(hours, 60 * 60 * 1000);
 }
 
 function validateRequest(request) {
@@ -99,6 +80,7 @@ function calculateSchedule(prices, request) {
     ? request.requiredHours
     : request.requiredEnergyKWh / power;
 
+  const requiredSlots = Math.ceil(hoursNeeded);
   const maxPriceLimit = toThresholdEurPerMWh(request.maxPriceEurPerMWh, request.maxPriceCentsPerKWh);
 
   const withinWindow = prices.filter((p) => {
@@ -109,10 +91,6 @@ function calculateSchedule(prices, request) {
   if (withinWindow.length === 0) {
     throw new Error('No pricing hours found inside selected time window.');
   }
-
-  const slotDurationMs = inferSlotDurationMs(withinWindow);
-  const slotDurationHours = slotDurationMs / (60 * 60 * 1000);
-  const requiredSlots = Math.ceil(hoursNeeded / slotDurationHours);
 
   const filtered = maxPriceLimit === null
     ? withinWindow
@@ -131,13 +109,13 @@ function calculateSchedule(prices, request) {
   let estimatedCostEur = 0;
 
   for (const slot of selected) {
-    const slotHours = Math.max(0, Math.min(slotDurationHours, remainingHours));
+    const slotHours = Math.max(0, Math.min(1, remainingHours));
     const energyKWh = slotHours * power;
     estimatedCostEur += energyKWh * (slot.eurPerMWh / 1000);
     remainingHours -= slotHours;
   }
 
-  const summaryRanges = summarizeSlotRanges(selected, slotDurationMs);
+  const summaryRanges = summarizeHourRanges(selected);
 
   return {
     selectedHours: selected,
@@ -145,7 +123,6 @@ function calculateSchedule(prices, request) {
     estimatedCostEur: Number(estimatedCostEur.toFixed(2)),
     hoursNeeded: Number(hoursNeeded.toFixed(2)),
     chargingPowerKw: power,
-    slotDurationMinutes: Math.round(slotDurationHours * 60),
   };
 }
 
