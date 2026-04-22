@@ -109,7 +109,7 @@ function calculateSchedule(prices, request) {
   let estimatedCostEur = 0;
 
   for (const slot of selected) {
-    const slotHours = Math.min(1, Math.max(remainingHours, 0));
+    const slotHours = Math.max(0, Math.min(1, remainingHours));
     const energyKWh = slotHours * power;
     estimatedCostEur += energyKWh * (slot.eurPerMWh / 1000);
     remainingHours -= slotHours;
