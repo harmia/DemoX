@@ -11,6 +11,8 @@ A simple, shippable web app for scheduling EV charging to the cheapest spot-pric
   - Charging power (kW)
   - Optional max price threshold (€/MWh)
 - Spot-price chart for next 24h with selected charging hours highlighted
+- Hover tooltip with hour + price details
+- Simple charging timeline view showing ON/OFF hours
 - Clear summary text + estimated cost
 - Mock local spot-price dataset (`data/mock-prices.json`)
 - Local persistence for schedules (`data/schedules.json`)

@@ -6,22 +6,26 @@
     <title>EV Spot Charging Scheduler</title>
     <style>
       :root {
-        --bg: #f8fafc;
+        --bg: #f5f7fb;
         --card: #ffffff;
         --text: #0f172a;
-        --muted: #475569;
-        --accent: #2563eb;
-        --accent-soft: #bfdbfe;
-        --border: #e2e8f0;
+        --muted: #5a6476;
+        --accent: #2f6fed;
+        --accent-soft: #dce8ff;
+        --selection: #1f9d66;
+        --shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+        --surface-soft: #eef2f8;
       }
       [data-theme="dark"] {
-        --bg: #0b1220;
-        --card: #111827;
-        --text: #e5e7eb;
-        --muted: #94a3b8;
-        --accent: #60a5fa;
-        --accent-soft: #1e3a8a;
-        --border: #1f2937;
+        --bg: #0d1422;
+        --card: #121a2b;
+        --text: #e4e9f2;
+        --muted: #95a1b6;
+        --accent: #7aa7ff;
+        --accent-soft: #23355f;
+        --selection: #4cc38f;
+        --shadow: 0 14px 28px rgba(1, 6, 18, 0.45);
+        --surface-soft: #1b263d;
       }
       * { box-sizing: border-box; }
       body {
@@ -29,64 +33,96 @@
         font-family: Inter, ui-sans-serif, system-ui, sans-serif;
         background: var(--bg);
         color: var(--text);
+        line-height: 1.45;
       }
       .container {
-        max-width: 980px;
+        max-width: 1040px;
         margin: 0 auto;
-        padding: 24px;
+        padding: 20px;
       }
       .header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
+        gap: 12px;
+        margin-bottom: 20px;
+      }
+      h1 {
+        margin: 0;
+        font-size: clamp(1.3rem, 2.4vw, 1.85rem);
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        margin: 0;
+      }
+      .subtitle {
+        margin: 6px 0 0;
+        color: var(--muted);
+        font-size: 0.95rem;
       }
       .card {
         background: var(--card);
-        border: 1px solid var(--border);
-        border-radius: 16px;
-        padding: 16px;
-        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        border-radius: 18px;
+        padding: 18px;
+        box-shadow: var(--shadow);
       }
       form {
         display: grid;
-        gap: 12px;
+        gap: 14px;
         grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       }
       label {
         display: grid;
         gap: 6px;
-        font-size: 0.9rem;
+        font-size: 0.88rem;
+        font-weight: 500;
         color: var(--muted);
       }
       input, select, button {
-        border-radius: 10px;
-        border: 1px solid var(--border);
-        background: transparent;
+        border-radius: 12px;
+        border: 1px solid transparent;
+        background: var(--surface-soft);
         color: var(--text);
-        padding: 10px;
+        padding: 11px 12px;
+        font-size: 0.95rem;
+      }
+      input:focus, select:focus, button:focus {
+        outline: 2px solid color-mix(in oklab, var(--accent) 58%, transparent);
+        outline-offset: 1px;
       }
       button {
         cursor: pointer;
-        border: none;
-        background: var(--accent);
-        color: white;
+        border: 0;
         font-weight: 600;
       }
-      .chart {
-        margin-top: 16px;
-        display: grid;
-        grid-template-columns: repeat(24, minmax(16px, 1fr));
-        gap: 6px;
-        align-items: end;
-        height: 230px;
+      .primary-button {
+        background: var(--accent);
+        color: #fff;
       }
-      .bar {
-        border-radius: 8px 8px 4px 4px;
-        background: var(--accent-soft);
+      .secondary-button {
+        background: var(--surface-soft);
+        color: var(--text);
+        white-space: nowrap;
+      }
+      .chartPanel {
         position: relative;
       }
-      .bar.selected { background: #16a34a; }
+      .chart {
+        margin-top: 14px;
+        display: grid;
+        grid-template-columns: repeat(24, minmax(16px, 1fr));
+        gap: 5px;
+        align-items: end;
+        height: 210px;
+      }
+      .bar {
+        border-radius: 10px 10px 6px 6px;
+        background: var(--accent-soft);
+        position: relative;
+        transition: background-color 0.35s ease, transform 0.2s ease;
+      }
+      .bar:hover { transform: translateY(-2px); }
+      .bar.selected { background: var(--selection); }
       .bar span {
         position: absolute;
         bottom: -20px;
@@ -95,21 +131,116 @@
         font-size: 10px;
         color: var(--muted);
       }
+      .chartTooltip {
+        position: absolute;
+        z-index: 20;
+        transform: translate(-50%, -112%);
+        pointer-events: none;
+        background: color-mix(in oklab, var(--card) 86%, black 14%);
+        color: var(--text);
+        border-radius: 9px;
+        padding: 6px 8px;
+        font-size: 0.78rem;
+        box-shadow: var(--shadow);
+      }
+      .legend {
+        margin-top: 24px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        color: var(--muted);
+        font-size: 0.86rem;
+      }
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        background: var(--accent-soft);
+      }
+      .dot.selected { background: var(--selection); }
+      .timelineTitle {
+        margin: 16px 0 8px;
+        font-size: 1rem;
+      }
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(24, minmax(14px, 1fr));
+        gap: 4px;
+      }
+      .timelineSlot {
+        background: var(--surface-soft);
+        border-radius: 999px;
+        height: 16px;
+        position: relative;
+        transition: background-color 0.35s ease;
+      }
+      .timelineSlot.on {
+        background: var(--selection);
+      }
+      .timelineSlot .tick {
+        position: absolute;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: var(--muted);
+      }
       .summary {
-        margin-top: 12px;
-        padding: 12px;
-        border-radius: 10px;
-        background: rgba(37, 99, 235, 0.08);
+        margin-top: 28px;
+        padding: 12px 13px;
+        border-radius: 12px;
+        background: color-mix(in oklab, var(--accent) 15%, var(--surface-soft) 85%);
+      }
+      .animate-update .bar.selected,
+      .timeline.animate-update .timelineSlot.on {
+        animation: softPulse 0.7s ease;
+      }
+      .summary.animate-update {
+        animation: summaryFade 0.65s ease;
       }
       .error { color: #dc2626; margin-top: 8px; }
       .muted { color: var(--muted); }
+      @keyframes softPulse {
+        0% { filter: brightness(1); }
+        45% { filter: brightness(1.14); }
+        100% { filter: brightness(1); }
+      }
+      @keyframes summaryFade {
+        0% { opacity: 0.82; }
+        100% { opacity: 1; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .bar,
+        .timelineSlot,
+        .summary,
+        .animate-update .bar.selected,
+        .timeline.animate-update .timelineSlot.on,
+        .summary.animate-update {
+          transition: none;
+          animation: none;
+        }
+      }
+      @media (max-width: 700px) {
+        .container { padding: 14px; }
+        .card { padding: 14px; }
+        .header { align-items: flex-start; }
+        .chart { gap: 3px; }
+      }
     </style>
   </head>
   <body>
     <div class="container">
       <div class="header">
-        <h1>EV Spot Charging Scheduler</h1>
-        <button id="themeToggle" type="button">Toggle dark mode</button>
+        <div>
+          <h1>EV Spot Charging Scheduler</h1>
+          <p class="subtitle">Choose your window and let the cheapest charging hours be selected automatically.</p>
+        </div>
+        <button id="themeToggle" class="secondary-button" type="button">Dark mode</button>
       </div>
 
       <div class="card">
@@ -138,7 +269,7 @@
           <label>Optional max price (€/MWh)
             <input id="maxPriceEurPerMWh" type="number" min="0" step="0.1" placeholder="e.g. 90" />
           </label>
-          <button type="submit">Calculate cheapest charging slots</button>
+          <button class="primary-button" type="submit">Calculate cheapest charging slots</button>
         </form>
         <p class="muted">Mock prices now; pricing provider is isolated in backend for easy real Nord Pool integration later.</p>
         <div id="error" class="error"></div>
@@ -146,7 +277,16 @@
 
       <div class="card" style="margin-top: 16px;">
         <h2>Spot prices (next 24h)</h2>
-        <div id="chart" class="chart"></div>
+        <div class="chartPanel">
+          <div id="chartTooltip" class="chartTooltip" hidden></div>
+          <div id="chart" class="chart"></div>
+        </div>
+        <div class="legend">
+          <span><span class="dot"></span> Spot price</span>
+          <span><span class="dot selected"></span> Charging selected (ON)</span>
+        </div>
+        <h3 class="timelineTitle">Charging timeline</h3>
+        <div id="timeline" class="timeline"></div>
         <div id="summary" class="summary">No schedule calculated yet.</div>
       </div>
     </div>
